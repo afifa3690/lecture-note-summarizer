@@ -1,0 +1,229 @@
+import React, { useState } from 'react';
+import { Presentation, FileText, Check, Download, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { cn } from '../utils/cn';
+
+export const SlideGeneratorView: React.FC = () => {
+  const [selectedDocs, setSelectedDocs] = useState<string[]>(['1']);
+  const [slideCount, setSlideCount] = useState<number>(10);
+  const [style, setStyle] = useState<'academic' | 'professional' | 'minimal'>('academic');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [currentPreviewSlide, setCurrentPreviewSlide] = useState(0);
+
+  // Mock data
+  const docs = [
+    { id: '1', title: 'Intro to AI & ML', type: 'lecture_notes' },
+    { id: '2', title: 'Cellular Respiration', type: 'textbook_chapter' },
+    { id: '3', title: 'History of Rome', type: 'youtube_lecture' },
+  ];
+
+  const handleGenerate = () => {
+    setIsGenerating(true);
+    // Simulate generation
+    setTimeout(() => {
+      setIsGenerating(false);
+      setShowPreview(true);
+    }, 2000);
+  };
+
+  const toggleDoc = (id: string) => {
+    if (selectedDocs.includes(id)) {
+      setSelectedDocs(selectedDocs.filter(d => d !== id));
+    } else {
+      setSelectedDocs([...selectedDocs, id]);
+    }
+  };
+
+  return (
+    <div className="animate-in fade-in duration-300">
+      <div className="mb-8">
+        <h1 className="text-[var(--text-xl)] font-bold text-[var(--color-text-primary)]">Slide Generator</h1>
+        <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)] mt-1">
+          Convert your lecture summaries into polished presentation decks
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Controls Panel */}
+        <div className="lg:col-span-4 space-y-8">
+          <div className="bg-[var(--color-bg-surface)] border-[1px] border-[var(--color-border)] rounded-[var(--radius-lg)] p-6">
+            <h3 className="text-[var(--text-md)] font-bold text-[var(--color-text-primary)] mb-6 flex items-center gap-2">
+              <Presentation className="w-5 h-5 text-[var(--color-accent-primary)]" />
+              Configuration
+            </h3>
+
+            {/* Source Selection */}
+            <div className="mb-8">
+              <label className="text-[var(--text-xs)] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-3 block">
+                Select Sources
+              </label>
+              <div className="space-y-2">
+                {docs.map(doc => (
+                  <div 
+                    key={doc.id}
+                    onClick={() => toggleDoc(doc.id)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-[var(--radius-md)] border-[1px] cursor-pointer transition-all",
+                      selectedDocs.includes(doc.id) 
+                        ? "bg-[var(--color-accent-glow)] border-[var(--color-accent-primary)]" 
+                        : "bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:border-[var(--color-text-muted)]"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 rounded-[4px] border-[1px] flex items-center justify-center",
+                      selectedDocs.includes(doc.id) ? "bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]" : "border-[var(--color-text-muted)]"
+                    )}>
+                      {selectedDocs.includes(doc.id) && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <span className="text-[var(--text-sm)] font-medium text-[var(--color-text-primary)] truncate">{doc.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Slide Count */}
+            <div className="mb-8">
+              <label className="text-[var(--text-xs)] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-3 block">
+                Slide Count
+              </label>
+              <div className="flex gap-2">
+                {[5, 10, 15].map(count => (
+                  <button
+                    key={count}
+                    onClick={() => setSlideCount(count)}
+                    className={cn(
+                      "flex-1 py-2 text-[var(--text-sm)] font-medium rounded-[var(--radius-md)] border-[1px] transition-all",
+                      slideCount === count 
+                        ? "bg-[var(--color-accent-primary)] text-white border-[var(--color-accent-primary)]" 
+                        : "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:text-[var(--color-text-primary)]"
+                    )}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Style Selection */}
+            <div className="mb-8">
+              <label className="text-[var(--text-xs)] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-3 block">
+                Presentation Style
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {(['academic', 'professional', 'minimal'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setStyle(s)}
+                    className={cn(
+                      "w-full px-4 py-2.5 text-[var(--text-sm)] font-medium rounded-[var(--radius-md)] border-[1px] text-left capitalize transition-all",
+                      style === s 
+                        ? "bg-[var(--color-bg-subtle)] border-[var(--color-accent-primary)] text-[var(--color-accent-primary)]" 
+                        : "bg-[var(--color-bg-elevated)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button 
+              variant="primary" 
+              fullWidth 
+              isLoading={isGenerating}
+              onClick={handleGenerate}
+              disabled={selectedDocs.length === 0}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate Slides
+            </Button>
+          </div>
+        </div>
+
+        {/* Preview Panel */}
+        <div className="lg:col-span-8">
+          <div className="bg-[var(--color-bg-surface)] border-[1px] border-[var(--color-border)] rounded-[var(--radius-lg)] h-full min-h-[500px] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b-[1px] border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-[var(--text-md)] font-bold text-[var(--color-text-primary)]">Preview</h3>
+              {showPreview && (
+                <Button variant="secondary" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download .pptx
+                </Button>
+              )}
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--color-bg-base)]/50">
+              {!showPreview && !isGenerating && (
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-[var(--color-bg-subtle)] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Presentation className="w-8 h-8 text-[var(--color-text-muted)]" />
+                  </div>
+                  <h4 className="text-[var(--text-md)] font-semibold text-[var(--color-text-secondary)]">No Slides Generated</h4>
+                  <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] mt-2">Configure your options and click generate to see a preview</p>
+                </div>
+              )}
+
+              {isGenerating && (
+                <div className="text-center">
+                  <div className="inline-block relative w-20 h-20 mb-4">
+                    <div className="absolute inset-0 border-4 border-[var(--color-accent-primary)]/20 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <h4 className="text-[var(--text-md)] font-semibold text-[var(--color-text-primary)]">Generating your slides...</h4>
+                  <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] mt-2">Analyzing content and creating structure</p>
+                </div>
+              )}
+
+              {showPreview && (
+                <div className="w-full h-full flex flex-col items-center justify-center">
+                  <div className="w-full max-w-[600px] aspect-video bg-white rounded-sm shadow-xl flex flex-col p-12 text-black animate-in zoom-in-95 duration-300">
+                    {currentPreviewSlide === 0 ? (
+                      <div className="flex flex-col h-full justify-center text-center">
+                        <h1 className="text-3xl font-bold mb-4">{docs.find(d => d.id === selectedDocs[0])?.title}</h1>
+                        <div className="w-12 h-1 bg-blue-600 mx-auto mb-6"></div>
+                        <p className="text-lg text-gray-600">Lecture Summary Presentation</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col h-full">
+                        <h2 className="text-2xl font-bold border-b-2 border-blue-600 pb-2 mb-6">Introduction to AI</h2>
+                        <ul className="space-y-4 text-lg">
+                          <li>• AI focuses on creating systems capable of human intelligence.</li>
+                          <li>• Machine Learning is a subset of AI.</li>
+                          <li>• Key algorithms include linear regression and neural networks.</li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-6 mt-8">
+                    <Button 
+                      variant="icon" 
+                      size="icon" 
+                      onClick={() => setCurrentPreviewSlide(Math.max(0, currentPreviewSlide - 1))}
+                      disabled={currentPreviewSlide === 0}
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </Button>
+                    <span className="text-[var(--text-sm)] font-medium text-[var(--color-text-primary)]">
+                      Slide {currentPreviewSlide + 1} of {slideCount}
+                    </span>
+                    <Button 
+                      variant="icon" 
+                      size="icon" 
+                      onClick={() => setCurrentPreviewSlide(Math.min(slideCount - 1, currentPreviewSlide + 1))}
+                      disabled={currentPreviewSlide === slideCount - 1}
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

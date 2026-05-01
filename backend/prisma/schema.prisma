@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  role          String         @default("student") // student, educator, admin
+  documents     Document[]
+  subscriptions Subscription?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Document {
+  id                String       @id @default(uuid())
+  user              User         @relation(fields: [userId], references: [id])
+  userId            String
+  sourceType        String       // pdf, docx, image, audio, youtube, url
+  sourceUrl         String?
+  sourceFilename    String?
+  title             String?      // Add a title field
+  rawText           String?      
+  ocrConfidence     Float?
+  summaryShort      String?      
+  summaryMedium     String?      
+  summaryDetailed   String?      
+  keyConcepts       String?      // Stored as JSON string
+  subjectCategory   String?
+  flashcards        String?      // Stored as JSON string
+  practiceQuestions String?      // Stored as JSON string
+  processingStatus  String       @default("queued") // queued, processing, ready, failed, ocr_review
+  llmModelUsed      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  tier      String   @default("basic") // basic, pro
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
