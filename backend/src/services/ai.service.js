@@ -5,21 +5,22 @@ let aiInstance = null;
 export const analyzeDocument = async (text) => {
   if (!aiInstance) {
     if (!process.env.GEMINI_API_KEY) {
-      console.warn("GEMINI_API_KEY is missing. Using mock response.");
-      return getMockResponse();
+      throw new Error("GEMINI_API_KEY is missing. Please add it to your .env file.");
     }
     aiInstance = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   
   const prompt = `
     Analyze the following document text and extract the following:
-    1. A short summary (1 paragraph).
-    2. A medium summary (2-3 paragraphs).
-    3. A detailed summary (comprehensive).
-    4. Key concepts (list of terms and their definitions).
-    5. Flashcards (list of questions and answers covering the main points).
-    6. Practice questions (multiple choice questions with 4 options and the index of the correct answer).
-    7. Subject category.
+    1. A short summary (1 paragraph). Must be unique to this exact text.
+    2. A medium summary (2-3 paragraphs). Must be highly detailed and specific to this text.
+    3. A detailed summary (comprehensive). Must cover all main points extensively.
+    4. Key concepts (list of at least 5 terms and their definitions).
+    5. Flashcards (list of at least 10 unique questions and answers covering the main points).
+    6. Practice questions (at least 5 multiple choice questions with 4 options and the index of the correct answer).
+    7. Subject category (e.g. Computer Science, Biology, History).
+
+    Do NOT output generic AI placeholders. Use ONLY the provided document text as your source of truth.
 
     Provide the output strictly as a JSON object matching this schema:
     {
@@ -37,7 +38,7 @@ export const analyzeDocument = async (text) => {
   `;
 
   try {
-    console.log("Calling Gemini API...");
+    console.log("[AI Service] Calling Gemini API for document analysis...");
     const response = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -81,32 +82,41 @@ export const analyzeDocument = async (text) => {
     });
 
     const output = JSON.parse(response.text);
-    console.log("Gemini generation successful.");
+    console.log("[AI Service] Gemini generation successful.");
     return output;
   } catch (error) {
-    console.error("AI Generation Error:", error);
+    console.error("[AI Service] AI Generation Error:", error);
     throw error;
   }
 };
 
-const getMockResponse = () => ({
-  summaryShort: "This is a mocked short summary because no Gemini API Key was found.",
-  summaryMedium: "This is a mocked medium summary. Please add GEMINI_API_KEY to your .env file to process actual document contents with Google's Gemini models.",
-  summaryDetailed: "This is a mocked detailed summary. The backend detected a missing GEMINI_API_KEY and fell back to this static placeholder. Add the key and restart the server to enable AI processing.",
-  keyConcepts: [
-    { term: "Mock Data", definition: "Data used as a placeholder when real data is unavailable." },
-    { term: "API Key", definition: "A unique identifier used to authenticate a user, developer, or calling program to an API." }
-  ],
-  flashcards: [
-    { q: "Why are you seeing mock data?", a: "Because the GEMINI_API_KEY is not set in the backend .env file." },
-    { q: "How do you fix this?", a: "Add GEMINI_API_KEY='your-key' to the backend/.env file and restart the server." }
-  ],
-  practiceQuestions: [
-    {
-      question: "Which file needs to be updated to use the real AI?",
-      options: ["frontend/.env", "backend/.env", "package.json", "index.html"],
-      correct: 1
+export const chatWithDocument = async (text, message) => {
+  if (!aiInstance) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is missing. Please add it to your .env file.");
     }
-  ],
-  subjectCategory: "System Configuration"
-});
+    aiInstance = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+
+  const prompt = `
+    You are an intelligent study assistant. Answer the user's question based strictly on the provided document text. 
+    If the answer is not in the text, politely say that you cannot find the answer in the provided document.
+    
+    User Question: ${message}
+
+    Document Text:
+    ${text.substring(0, 60000)}
+  `;
+
+  try {
+    console.log("[AI Service] Calling Gemini API for chat...");
+    const response = await aiInstance.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return response.text;
+  } catch (error) {
+    console.error("[AI Service] Chat Generation Error:", error);
+    throw error;
+  }
+};

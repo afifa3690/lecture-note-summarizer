@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { UploadDropZone } from '../components/ui/UploadDropZone';
 import { UploadCard } from '../components/ui/UploadCard';
 import { Link2, Plus } from 'lucide-react';
+import { uploadFile, uploadUrl, fetchDocuments } from '../utils/api';
 import type { ContentType } from '../components/ui/ContentTypeTag';
 import type { ProcessingStatus } from '../components/ui/ProcessingBadge';
 
@@ -48,12 +49,61 @@ const mockDocuments = [
 
 export const Dashboard: React.FC = () => {
   const [showUpload, setShowUpload] = useState(false);
+  const [documents, setDocuments] = useState<any[]>(mockDocuments);
+  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
 
-  const handleFileSelect = (files: FileList) => {
-    console.log('Files selected:', files);
-    // Handle file upload logic here
-    setShowUpload(false);
+  const getContentType = (sourceType: string): ContentType => {
+    switch (sourceType) {
+      case 'pdf': return 'pdf_document';
+      case 'youtube': return 'youtube_lecture';
+      case 'url': return 'website_link';
+      case 'pptx':
+      case 'document': return 'lecture_notes';
+      default: return 'lecture_notes';
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments()
+      .then(docs => {
+        if (docs && docs.length > 0) setDocuments(docs);
+      })
+      .catch(err => console.error('Failed to fetch documents:', err));
+  }, []);
+
+  const handleFileSelect = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsUploading(true);
+    try {
+      const res = await uploadFile(files[0]);
+      if (res.document) {
+        setDocuments(prev => [res.document, ...prev]);
+      }
+      setShowUpload(false);
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleUrlSubmit = async (url: string) => {
+    if (!url) return;
+    setIsUploading(true);
+    try {
+      const res = await uploadUrl(url);
+      if (res.document) {
+        setDocuments(prev => [res.document, ...prev]);
+      }
+      setShowUpload(false);
+    } catch (err: any) {
+      console.error('URL upload failed:', err);
+      alert('URL Upload failed: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -82,21 +132,25 @@ export const Dashboard: React.FC = () => {
 
       {showUpload && (
         <div className="mb-8 animate-in slide-in-from-top-4 duration-200">
-          <UploadDropZone onFileSelect={handleFileSelect} />
+          <UploadDropZone 
+            onFileSelect={handleFileSelect} 
+            onUrlSubmit={handleUrlSubmit} 
+          />
+          {isUploading && <p className="text-center mt-4 text-[var(--color-text-secondary)] font-medium">Uploading and processing document... this may take a few seconds.</p>}
         </div>
       )}
 
-      {mockDocuments.length > 0 ? (
+      {documents.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {mockDocuments.map((doc) => (
+          {documents.map((doc) => (
             <UploadCard
               key={doc.id}
               title={doc.title}
-              type={doc.type}
-              status={doc.status}
-              filename={doc.filename}
+              type={doc.type || getContentType(doc.sourceType)}
+              status={doc.status || doc.processingStatus || 'ready'}
+              filename={doc.filename || doc.sourceFilename || doc.sourceUrl || ''}
               filesize={doc.filesize}
-              timestamp={doc.timestamp}
+              timestamp={doc.timestamp || new Date(doc.createdAt).toLocaleDateString()}
               onClick={() => navigate(`/summary/${doc.id}`)}
               onActionClick={() => console.log(`Action menu for ${doc.id}`)}
             />

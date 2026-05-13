@@ -1,49 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Search, FileText, Plus } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ChatMessage } from '../components/ui/ChatMessage';
 import { ContentTypeTag } from '../components/ui/ContentTypeTag';
 import { cn } from '../utils/cn';
+import { fetchDocuments, askQuestion } from '../utils/api';
+import type { ContentType } from '../components/ui/ContentTypeTag';
 
 export const QAView: React.FC = () => {
   const [message, setMessage] = useState('');
-  const [activeDocId, setActiveDocId] = useState('1');
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [docs, setDocs] = useState<any[]>([]);
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
 
-  // Mock data
-  const docs = [
-    { id: '1', title: 'Intro to AI & ML', type: 'lecture_notes' },
-    { id: '2', title: 'Cellular Respiration', type: 'textbook_chapter' },
-    { id: '3', title: 'History of Rome', type: 'youtube_lecture' },
-  ];
+  useEffect(() => {
+    fetchDocuments()
+      .then(data => {
+        setDocs(data);
+        if (data.length > 0) {
+          setActiveDocId(data[0].id);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
-  const [chatHistory, setChatHistory] = useState([
-    { role: 'ai', content: "Hello! I've analyzed your documents. Ask me anything about the core concepts of AI or cellular respiration.", timestamp: '10:05 AM' },
-    { role: 'user', content: "What are the three main types of Machine Learning mentioned in the AI lecture?", timestamp: '10:06 AM' },
-    { 
-      role: 'ai', 
-      content: "Based on your 'Intro to AI & ML' notes, the three main types are Supervised Learning, Unsupervised Learning, and Reinforcement Learning.", 
-      timestamp: '10:06 AM',
-      citations: ['Intro to AI & ML, Slide 14']
+  // Reset chat when switching docs
+  useEffect(() => {
+    if (activeDocId) {
+      setChatHistory([
+        { 
+          role: 'ai', 
+          content: "Hello! I've analyzed this document. Ask me anything about its concepts.", 
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+        }
+      ]);
     }
-  ]);
+  }, [activeDocId]);
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const handleSendMessage = async () => {
+    if (!message.trim() || !activeDocId) return;
     
-    const newUserMsg = { role: 'user' as const, content: message, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-    setChatHistory([...chatHistory, newUserMsg]);
+    const userMsgText = message;
+    const newUserMsg = { role: 'user', content: userMsgText, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    setChatHistory(prev => [...prev, newUserMsg]);
     setMessage('');
+    setIsTyping(true);
     
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await askQuestion(activeDocId, userMsgText);
       const aiResponse = { 
-        role: 'ai' as const, 
-        content: "That's a great question. According to the source material...", 
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        citations: ['Intro to AI & ML, Page 4']
+        role: 'ai', 
+        content: response.answer || "I couldn't generate an answer.", 
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setChatHistory(prev => [...prev, aiResponse]);
-    }, 1000);
+    } catch (error: any) {
+      setChatHistory(prev => [...prev, { 
+        role: 'ai', 
+        content: `Error: ${error.message || 'Failed to communicate with AI.'}`, 
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -64,6 +84,7 @@ export const QAView: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-2">
           <h4 className="text-[var(--text-xs)] font-bold uppercase text-[var(--color-text-muted)] px-3 py-2">Sources</h4>
           <div className="space-y-1">
+            {docs.length === 0 && <p className="px-3 text-sm text-[var(--color-text-muted)]">No documents available.</p>}
             {docs.map((doc) => (
               <button
                 key={doc.id}
@@ -76,12 +97,12 @@ export const QAView: React.FC = () => {
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <FileText className={cn("w-4 h-4", activeDocId === doc.id ? "text-[var(--color-accent-primary)]" : "text-[var(--color-text-muted)]")} />
-                  <span className={cn("text-[var(--text-sm)] font-medium", activeDocId === doc.id ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]")}>
-                    {doc.title}
+                  <FileText className={cn("w-4 h-4 shrink-0", activeDocId === doc.id ? "text-[var(--color-accent-primary)]" : "text-[var(--color-text-muted)]")} />
+                  <span className={cn("text-[var(--text-sm)] font-medium truncate", activeDocId === doc.id ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]")}>
+                    {doc.title || doc.sourceFilename}
                   </span>
                 </div>
-                <ContentTypeTag type={doc.type as any} className="scale-90 origin-left" />
+                <ContentTypeTag type={(doc.sourceType || 'lecture_notes') as ContentType} className="scale-90 origin-left" />
               </button>
             ))}
           </div>
@@ -108,6 +129,11 @@ export const QAView: React.FC = () => {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+          {!activeDocId && (
+            <div className="m-auto text-[var(--color-text-muted)] text-center">
+              Please select or upload a document to start chatting.
+            </div>
+          )}
           {chatHistory.map((msg, idx) => (
             <ChatMessage 
               key={idx} 
@@ -117,6 +143,11 @@ export const QAView: React.FC = () => {
               citations={msg.citations}
             />
           ))}
+          {isTyping && (
+             <div className="text-[var(--text-sm)] text-[var(--color-text-muted)] italic mt-2">
+               AI is thinking...
+             </div>
+          )}
         </div>
 
         {/* Input */}
@@ -134,10 +165,11 @@ export const QAView: React.FC = () => {
               }}
               placeholder="Ask a question about your notes..."
               className="w-full bg-[var(--color-bg-elevated)] border-[1px] border-[var(--color-border)] rounded-[var(--radius-md)] pl-4 pr-12 py-3 text-[var(--text-base)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] resize-none"
+              disabled={!activeDocId || isTyping}
             />
             <button 
               onClick={handleSendMessage}
-              disabled={!message.trim()}
+              disabled={!message.trim() || !activeDocId || isTyping}
               className="absolute right-3 bottom-2.5 p-1.5 bg-[var(--color-accent-primary)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-primary-hover)] disabled:opacity-40 disabled:hover:bg-[var(--color-accent-primary)] transition-colors"
             >
               <Send className="w-4 h-4" />
