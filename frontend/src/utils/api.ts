@@ -87,22 +87,32 @@ export const fetchCurrentUser = async () => {
 };
 
 export const loginUser = async (credentials: any) => {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials)
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+  } catch (error: any) {
+    throw new Error('Could not connect to the server. Please ensure the backend is running.');
+  }
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.error || 'Login failed');
   return data;
 };
 
 export const registerUser = async (userData: any) => {
-  const res = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userData)
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+  } catch (error: any) {
+    throw new Error('Could not connect to the server. Please ensure the backend is running.');
+  }
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.error || 'Registration failed');
   return data;

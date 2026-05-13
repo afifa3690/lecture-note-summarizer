@@ -58,7 +58,7 @@ export const uploadDocument = async (req, res) => {
     console.log(`[Upload] -> Database mapping: Storing generated content for new Document record.`);
     const doc = await prisma.document.create({
       data: {
-        userId: user.id,
+        userId: userId,
         title: finalTitle,
         sourceType,
         sourceUrl,

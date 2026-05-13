@@ -31,6 +31,23 @@ export const SummaryView: React.FC = () => {
       });
   }, [id]);
 
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: docData?.title || 'Lecture Summary',
+        text: 'Check out this lecture summary!',
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    }
+  };
+
   if (isLoading) {
     return <div className="p-10 text-center text-[var(--color-text-secondary)]">Loading document data...</div>;
   }
@@ -50,7 +67,7 @@ export const SummaryView: React.FC = () => {
   return (
     <div className="animate-in fade-in duration-300">
       <div className="max-w-[760px] mx-auto mb-10">
-        <Link to="/">
+        <Link to="/" className="print:hidden">
           <Button variant="ghost" size="sm" className="mb-6 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Documents
@@ -88,12 +105,12 @@ export const SummaryView: React.FC = () => {
 
         <SummaryOutputCard content={summaryContent || 'Summary not available.'} className="mb-6" />
 
-        <div className="flex flex-wrap gap-3 mb-12">
-          <Button variant="secondary" size="sm">
+        <div className="flex flex-wrap gap-3 mb-12 print:hidden">
+          <Button variant="secondary" size="sm" onClick={handleShare}>
             <Share2 className="w-4 h-4 mr-2" />
             Share Summary
           </Button>
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={handleDownloadPDF}>
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>

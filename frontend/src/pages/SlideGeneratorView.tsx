@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import pptxgen from 'pptxgenjs';
 import { Presentation, Check, Download, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { cn } from '../utils/cn';
 import { fetchDocuments, fetchDocumentById } from '../utils/api';
 
 export const SlideGeneratorView: React.FC = () => {
+  const location = useLocation();
   const [docs, setDocs] = useState<any[]>([]);
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (location.state?.docId) {
+      setSelectedDocs([location.state.docId]);
+    }
+  }, [location.state]);
 
   const [style, setStyle] = useState<'academic' | 'professional' | 'minimal'>('academic');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -71,6 +80,27 @@ export const SlideGeneratorView: React.FC = () => {
     } else {
       setSelectedDocs([id]);
     }
+  };
+
+  const handleDownloadPptx = () => {
+    if (generatedSlides.length === 0) return;
+    const pptx = new pptxgen();
+    
+    generatedSlides.forEach(slide => {
+      const s = pptx.addSlide();
+      if (slide.type === 'title') {
+        s.addText(slide.title, { x: 1, y: 2, w: '80%', h: 1, fontSize: 36, bold: true, align: 'center', color: '003366' });
+        if (slide.subtitle) {
+          s.addText(slide.subtitle, { x: 1, y: 3.5, w: '80%', h: 1, fontSize: 18, align: 'center', color: '666666' });
+        }
+      } else {
+        s.addText(slide.title, { x: 0.5, y: 0.5, w: '90%', h: 0.8, fontSize: 24, bold: true, color: '003366' });
+        const bulletData = slide.content.map((c: string) => ({ text: c, options: { bullet: true, fontSize: 16 } }));
+        s.addText(bulletData, { x: 0.5, y: 1.5, w: '90%', h: 3.5, color: '333333' });
+      }
+    });
+
+    pptx.writeFile({ fileName: `AI_Generated_Slides.pptx` });
   };
 
   return (
@@ -164,7 +194,7 @@ export const SlideGeneratorView: React.FC = () => {
             <div className="px-6 py-4 border-b-[1px] border-[var(--color-border)] flex items-center justify-between">
               <h3 className="text-[var(--text-md)] font-bold text-[var(--color-text-primary)]">Preview</h3>
               {showPreview && (
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={handleDownloadPptx}>
                   <Download className="w-4 h-4 mr-2" />
                   Download .pptx
                 </Button>

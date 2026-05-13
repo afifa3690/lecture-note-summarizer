@@ -8,48 +8,9 @@ import { uploadFile, uploadUrl, fetchDocuments } from '../utils/api';
 import type { ContentType } from '../components/ui/ContentTypeTag';
 import type { ProcessingStatus } from '../components/ui/ProcessingBadge';
 
-// Mock data
-const mockDocuments = [
-  {
-    id: '1',
-    title: 'Introduction to Artificial Intelligence and Machine Learning Core Concepts',
-    type: 'lecture_notes' as ContentType,
-    status: 'ready' as ProcessingStatus,
-    filename: 'intro_ai_week1.pdf',
-    filesize: '2.4 MB',
-    timestamp: '2 hours ago'
-  },
-  {
-    id: '2',
-    title: 'Cellular Respiration and Photosynthesis',
-    type: 'textbook_chapter' as ContentType,
-    status: 'processing' as ProcessingStatus,
-    filename: 'bio_ch4.docx',
-    filesize: '1.1 MB',
-    timestamp: '5 hours ago'
-  },
-  {
-    id: '3',
-    title: 'History of the Roman Empire - Fall of Rome',
-    type: 'youtube_lecture' as ContentType,
-    status: 'ready' as ProcessingStatus,
-    filename: 'youtube.com/watch?v=123',
-    timestamp: 'Yesterday'
-  },
-  {
-    id: '4',
-    title: 'Calculus III - Handwritten Notes',
-    type: 'scanned_notes' as ContentType,
-    status: 'ocr' as ProcessingStatus,
-    filename: 'scan_001.jpg',
-    filesize: '4.8 MB',
-    timestamp: 'Yesterday'
-  }
-];
-
 export const Dashboard: React.FC = () => {
   const [showUpload, setShowUpload] = useState(false);
-  const [documents, setDocuments] = useState<any[]>(mockDocuments);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
 
@@ -67,7 +28,7 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchDocuments()
       .then(docs => {
-        if (docs && docs.length > 0) setDocuments(docs);
+        if (Array.isArray(docs)) setDocuments(docs);
       })
       .catch(err => console.error('Failed to fetch documents:', err));
   }, []);
@@ -114,7 +75,7 @@ export const Dashboard: React.FC = () => {
             My Documents
           </h1>
           <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)] mt-1">
-            4 documents · Last uploaded 2 hours ago
+            {documents.length} {documents.length === 1 ? 'document' : 'documents'}
           </p>
         </div>
         

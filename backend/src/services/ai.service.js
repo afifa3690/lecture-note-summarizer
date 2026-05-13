@@ -2,6 +2,29 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 let aiInstance = null;
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const withRetry = async (fn, retries = 3, delay = 2000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isRetryable = 
+        error.status === 503 || 
+        error.status === 429 || 
+        (error.message && (error.message.includes('503') || error.message.includes('429') || error.message.includes('UNAVAILABLE')));
+        
+      if (isRetryable && i < retries - 1) {
+        console.warn(`[AI Service] API busy. Retrying in ${delay / 1000}s... (Attempt ${i + 1} of ${retries})`);
+        await sleep(delay);
+        delay *= 2; // Exponential backoff
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
 export const analyzeDocument = async (text) => {
   if (!aiInstance) {
     if (!process.env.GEMINI_API_KEY) {
@@ -39,7 +62,7 @@ export const analyzeDocument = async (text) => {
 
   try {
     console.log("[AI Service] Calling Gemini API for document analysis...");
-    const response = await aiInstance.models.generateContent({
+    const response = await withRetry(() => aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
@@ -79,7 +102,7 @@ export const analyzeDocument = async (text) => {
           }
         }
       }
-    });
+    }));
 
     const output = JSON.parse(response.text);
     console.log("[AI Service] Gemini generation successful.");
@@ -110,10 +133,10 @@ export const chatWithDocument = async (text, message) => {
 
   try {
     console.log("[AI Service] Calling Gemini API for chat...");
-    const response = await aiInstance.models.generateContent({
+    const response = await withRetry(() => aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
-    });
+    }));
     return response.text;
   } catch (error) {
     console.error("[AI Service] Chat Generation Error:", error);
