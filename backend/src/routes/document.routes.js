@@ -1,13 +1,16 @@
 import { Router } from 'express';
 import { uploadDocument, getDocuments, getDocumentById, chatWithDocument } from '../controllers/document.controller.js';
 import { upload } from '../middlewares/upload.middleware.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
+
+// Protect all document routes with verifyToken middleware
+router.use(verifyToken);
 
 router.post('/upload', (req, res, next) => {
   upload.single('file')(req, res, function (err) {
     if (err) {
-      // Handle multer and file validation errors
       let errorMessage = err.message;
       if (err.code === 'LIMIT_FILE_SIZE') {
         errorMessage = 'File too large. Maximum size allowed is 10MB.';

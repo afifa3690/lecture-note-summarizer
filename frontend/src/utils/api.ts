@@ -1,23 +1,30 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api';
 
+const getHeaders = (isFormData = false) => {
+  const token = localStorage.getItem('token');
+  const headers: any = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  return headers;
+};
+
 export const fetchDocuments = async () => {
-  const res = await fetch(`${API_BASE}/documents`);
+  const res = await fetch(`${API_BASE}/documents`, { headers: getHeaders() });
   if (!res.ok) throw new Error('Failed to fetch documents');
   return res.json();
 };
 
 export const fetchDocumentById = async (id: string) => {
-  const res = await fetch(`${API_BASE}/documents/${id}`);
+  const res = await fetch(`${API_BASE}/documents/${id}`, { headers: getHeaders() });
   if (!res.ok) throw new Error('Failed to fetch document');
   return res.json();
 };
 
 export const uploadFile = async (file: File) => {
-  console.log(`\n--- [Network] Upload Request Started ---`);
-  console.log(`[Network] Selected filename: ${file.name}`);
-  console.log(`[Network] File Size: ${(file.size / 1024).toFixed(2)} KB`);
-  console.log(`[Network] API URL Used: ${API_BASE}/documents/upload`);
-  
   const formData = new FormData();
   formData.append('file', file);
   let sourceType = 'document';
@@ -31,30 +38,24 @@ export const uploadFile = async (file: File) => {
   try {
     const res = await fetch(`${API_BASE}/documents/upload`, {
       method: 'POST',
+      headers: getHeaders(true),
       body: formData,
     });
     
-    console.log(`[Network] Response Status: ${res.status} ${res.statusText}`);
     const data = await res.json().catch(() => ({ error: "Failed to parse JSON response from server." }));
-    console.log(`[Network] Response Body:`, data);
-    
     if (!res.ok || !data.success) {
-      console.error(`[Network] Server returned an error:`, data.error);
       throw new Error(data.error || data.message || 'Failed to upload file due to a server error.');
     }
-    
-    console.log(`--- [Network] Upload Request Succeeded ---\n`);
     return data;
   } catch (error: any) {
-    console.error(`[Network] Upload explicitly failed:`, error.message);
-    throw new Error(error.message || 'Network error or backend unavailable. Is the server running?');
+    throw new Error(error.message || 'Network error or backend unavailable.');
   }
 };
 
 export const uploadUrl = async (url: string) => {
   const res = await fetch(`${API_BASE}/documents/upload`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       sourceType: url.includes('youtube.com') || url.includes('youtu.be') ? 'youtube' : 'url',
       sourceUrl: url,
@@ -70,7 +71,7 @@ export const uploadUrl = async (url: string) => {
 export const askQuestion = async (docId: string, message: string) => {
   const res = await fetch(`${API_BASE}/documents/${docId}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ message }),
   });
   if (!res.ok) {
@@ -78,4 +79,31 @@ export const askQuestion = async (docId: string, message: string) => {
     throw new Error(errorData.error || 'Failed to get answer');
   }
   return res.json();
+};
+
+export const fetchCurrentUser = async () => {
+  const res = await fetch(`${API_BASE}/auth/me`, { headers: getHeaders() });
+  return res.json();
+};
+
+export const loginUser = async (credentials: any) => {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials)
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.error || 'Login failed');
+  return data;
+};
+
+export const registerUser = async (userData: any) => {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.error || 'Registration failed');
+  return data;
 };

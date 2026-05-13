@@ -1,6 +1,7 @@
 import React from 'react';
-import { BookOpen, User } from 'lucide-react';
+import { BookOpen, User, LogOut } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useAuth } from '../../context/AuthContext';
 
 interface NavLink {
   label: string;
@@ -9,18 +10,18 @@ interface NavLink {
 }
 
 const navLinks: NavLink[] = [
-  { label: 'Dashboard', href: '#', active: true },
-  { label: 'My Docs', href: '#' },
-  { label: 'Q&A', href: '#' },
+  { label: 'Dashboard', href: '/', active: true },
 ];
 
 export const Navbar: React.FC = () => {
+  const { user, logout } = useAuth();
+
   return (
     <nav className="sticky top-0 z-50 h-[60px] px-8 bg-[var(--color-bg-surface)]/85 backdrop-blur-[12px] border-b-[1px] border-[var(--color-border)] flex items-center justify-between">
       <div className="flex items-center gap-8 h-full">
         <div className="flex items-center gap-2 cursor-pointer">
           <BookOpen className="text-[var(--color-accent-primary)] w-6 h-6" />
-          <span className="text-[var(--text-lg)] font-bold text-[var(--color-text-primary)]">
+          <span className="text-[var(--text-lg)] font-bold text-[var(--color-text-primary)] hidden sm:block">
             LectureSummarizer
           </span>
         </div>
@@ -43,10 +44,21 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex items-center">
-        <button className="w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center hover:bg-[var(--color-bg-elevated)] transition-colors">
-          <User className="w-4 h-4 text-[var(--color-text-secondary)]" />
-        </button>
+      <div className="flex items-center gap-4">
+        {user && (
+          <div className="flex items-center gap-3">
+            <span className="text-[var(--text-sm)] text-[var(--color-text-secondary)] hidden sm:block">
+              {user.name || user.email}
+            </span>
+            <button 
+              onClick={logout}
+              title="Logout"
+              className="w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

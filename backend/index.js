@@ -21,6 +21,7 @@ if (!process.env.GEMINI_API_KEY) {
 // 3. Import services and routes after environment is secure
 import { PrismaClient } from '@prisma/client';
 import documentRoutes from './src/routes/document.routes.js';
+import authRoutes from './src/routes/auth.routes.js';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -36,6 +37,7 @@ app.use(cors({
 app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 
 app.get('/health', async (req, res) => {

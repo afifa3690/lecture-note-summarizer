@@ -53,11 +53,7 @@ export const uploadDocument = async (req, res) => {
     }
     console.log(`[Upload] -> AI Generation End: Successfully generated summary, ${aiContent.flashcards?.length || 0} flashcards, ${aiContent.practiceQuestions?.length || 0} practice questions.`);
 
-    // Get or create dummy user
-    let user = await prisma.user.findFirst();
-    if (!user) {
-       user = await prisma.user.create({ data: { email: 'test@example.com', name: 'Test User' } });
-    }
+    const userId = req.user.id;
 
     console.log(`[Upload] -> Database mapping: Storing generated content for new Document record.`);
     const doc = await prisma.document.create({
@@ -97,6 +93,7 @@ export const uploadDocument = async (req, res) => {
 export const getDocuments = async (req, res) => {
   try {
     const docs = await prisma.document.findMany({
+      where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' }
     });
     const safeDocs = docs.map(d => ({ ...d, rawText: undefined }));
@@ -112,6 +109,7 @@ export const getDocumentById = async (req, res) => {
       where: { id: req.params.id }
     });
     if (!doc) return res.status(404).json({ error: 'Document not found' });
+    if (doc.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
     
     // Parse JSON strings
     doc.keyConcepts = doc.keyConcepts ? JSON.parse(doc.keyConcepts) : [];
@@ -135,6 +133,7 @@ export const chatWithDocument = async (req, res) => {
       where: { id: req.params.id }
     });
     if (!doc) return res.status(404).json({ error: 'Document not found' });
+    if (doc.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
     if (!doc.rawText) return res.status(400).json({ error: 'Document text is empty or not yet processed' });
 
     console.log(`[Chat] User asked: "${message}" for doc: ${doc.id}`);
